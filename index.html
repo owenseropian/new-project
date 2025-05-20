@@ -1,6 +1,6 @@
 <head>
   <title>
-  rendering
+  Unique Shapes
   </title>
   <style>
     body {
@@ -38,28 +38,27 @@
   let im_w = nn.width
   let im_h = nn.height
   
-  //if cube is not loading change this to false
-  let weather = false
   //if set too low (below 5) it will lag and maybe crash
-  let pixelated = 1
+  let pixelated = 5
   //set outlines to -1 to get none (0.03 - 0.1 best outlines)
   let outlines = -1
   //distance away from cube
   let distance = 5
   let fovy = 65
+  let invert = 0
   
   let white = [1, 1, 1]
   let black = [0.01, 0.01, 0.01]
   
   let cube1 = new shape(
-           [[-0.5, -0.5, 0.5],
-            [0.5, -0.5, 0.5],
-            [-0.5, 0.5, 0.5],
-            [0.5, 0.5, 0.5],
-            [-0.5, -0.5, -0.5],
-            [0.5, -0.5, -0.5],
-            [-0.5, 0.5, -0.5],
-            [0.5, 0.5, -0.5]],
+           [[-1.2, -1.2, 1.2],
+            [1.2, -1.2, 1.2],
+            [-1.2, 1.2, 1.2],
+            [1.2, 1.2, 1.2],
+            [-1.2, -1.2, -1.2],
+            [1.2, -1.2, -1.2],
+            [-1.2, 1.2, -1.2],
+            [1.2, 1.2, -1.2]],
            [[0, 1, 2],
             [2, 1, 3],
             [5, 4, 7],
@@ -256,6 +255,7 @@
   }
   
   
+  
   function area_of_triangle(p1, p2, p3){
     return (p1[0]*p2[1]+p2[0]*p3[1]+p3[0]*p1[1]-(p1[0]*p3[1]+p2[0]*p1[1]+p3[0]*p2[1]))/2
   }
@@ -351,7 +351,7 @@
         z_buffer[x] = []
         for (let y = 0; y < im_h; y++) {
             img[x][y] = [0, 0, 0]
-            z_buffer[x][y] = -Infinity
+            z_buffer[x][y] = Math.pow(-1, invert) * -Infinity
         }
     }
 
@@ -459,7 +459,7 @@
                     // if (min_coverage < outlines){
                     //   color = white
                     // }
-                    if (z > z_buffer[x][y]){
+                    if (Math.pow(-1, invert) * z > Math.pow(-1, invert) * z_buffer[x][y]){
                         z_buffer[x][y] = z
                         img[x][y] = color
                     }
@@ -520,71 +520,66 @@
     redraw(shape)
   }
   
-  async function setup(shape){
+  function createButton(row, id, total_ids, shape, text){
+    let button = nn.create('button')
+      .addTo('body')
+      .on('click', () => {
+      drawn_shape = shape
+      redraw(drawn_shape)
+    })
+      .css({
+        position: "absolute",
+        fontSize: "16px",
+        left: 10 + nn.width * id / total_ids,
+        top: 10 + row * 20,
+        width: nn.width / total_ids,
+        zIndex: 9999999999999999
+    })
+    button.textContent = text
+  }
+  
+  function setup(shape){
     
     // navigator.geolocation.getCurrentPosition((e) => {
     //   console.log(e.coords.latitude)
     // })
-    
-    
-    if(weather){const gps = await nn.askForGPS()
-    
-    const pointURL = `https://api.weather.gov/points/${gps.lat},${gps.lng}`
-    const nws1 = await fetch(pointURL)
-    const pointData = await nws1.json()
-    const forecastURL = pointData.properties.forecast
-    const nws2 = await fetch(forecastURL)
-    const forecast = await nws2.json()
-    
-    let periods = []
-    for (let i = 0; i < 14; i++){
-      periods[i] = forecast.properties.periods[i].temperature
-    }
-    let max = periods[0]
-    for (let i = 1; i < periods.length; i++) {
-      if (periods[i] > max) {
-        max = periods[i]
-      }
-    }
-    for (let i = 0; i < 14; i++){
-      periods[i] /= max
-    }
-    console.log(forecast)
-    for (let x = 0; x < shape.vertex_colors.length; x++){
-      for (let y = 0; y < 3; y++){
-        shape.vertex_colors[x][y] = nn.random(periods)
-      }
-    }
-    // cube1.vertex_colors = [
-    //         [nn.random(periods), nn.random(periods), nn.random(periods)],
-    //         [nn.random(periods), nn.random(periods), nn.random(periods)],
-    //         [nn.random(periods), nn.random(periods), nn.random(periods)],
-    //         [nn.random(periods), nn.random(periods), nn.random(periods)],
-    //         [nn.random(periods), nn.random(periods), nn.random(periods)],
-    //         [nn.random(periods), nn.random(periods), nn.random(periods)],
-    //         [nn.random(periods), nn.random(periods), nn.random(periods)],
-    //         [nn.random(periods), nn.random(periods), nn.random(periods)],
-    //     ]
-               }
     
     let img = render(shape, im_w, im_h, e, fovy)
     draw(img)
     
     createSlider(1, 50, pixelated, 1, 0, (e) => {
     pixelated = Number(e.target.value)
-    redraw(shape)
+    redraw(drawn_shape)
   })
+    let total_ids = 4
+    createButton(0, 0, total_ids, cube1, "CUBE")
+    createButton(0, 1, total_ids, icosahedron, "ICOSAHEDRON")
+    createButton(0, 2, total_ids, great_dodecahedron, "DODECAHEDRON")
+    createButton(0, 3, total_ids, create_shape, "CREATE YOUR OWN! (click anywhere)")
+    
+    let button = nn.create('button')
+      .addTo('body')
+      .on('click', () => {
+      invert = (invert + 1) % 2
+      redraw(drawn_shape)
+    })
+      .css({
+        position: "absolute",
+        fontSize: "16px",
+        left: 10 + nn.width * 0 / 1,
+        top: 10 + 1 * 20,
+        width: nn.width / 1,
+        zIndex: 9999999999999999
+    })
+    button.textContent = "SECRET"
     //rotate(shape)
   }
   
 
 
-  let drawn_shape = create_shape
+  let drawn_shape = cube1
   nn.on("load", setup(drawn_shape))
   
-  
-  let startX
-  let startY
   
   function vectorDistance(v1, v2) {
     const dx = v2[0] - v1[0];
@@ -613,124 +608,172 @@
     ]
   }
   
-  function getCameraPositionFromViewMatrix(viewMatrix) {
-    const invView = mat4.invert([], viewMatrix);
-    return [invView[12], invView[13], invView[14]];
-  }
+  let dragging = false
+  const holdDuration = 300
+  let timer
+  let startX
+  let startY
   
-  nn.on("mousedown", () => {
-    if (nn.mouseY < nn.height - 30){
-      const x = 1.0 - (2.0 * (nn.mouseX)) / nn.width
-      const y = 1.0 - (2.0 * (nn.mouseY)) / nn.height
+  nn.on("mouseup", () => {
+    clearTimeout(timer)
+    if (!dragging) {
+      if (drawn_shape === create_shape){
+        if (nn.mouseY < nn.height - 30 && nn.mouseY > 60){
+          const x = 1.0 - (2.0 * (nn.mouseX)) / nn.width
+          const y = 1.0 - (2.0 * (nn.mouseY)) / nn.height
 
-      let viewMatrix = mat4.lookAt([], e, [0,0,0], [0,1,0])
-      
-      let aspect = im_w/im_h
-      let n = -1
-      let f = -100
+          let viewMatrix = mat4.lookAt([], e, [0,0,0], [0,1,0])
 
-      let projectionMatrix = mat4.perspective([], fovy, aspect, n, f)
-      
-      const clipCoords = [x, y, -1.0, 1.0]
-      
-      const invProj = mat4.invert([], projectionMatrix)
-      const invView = mat4.invert([], viewMatrix)
-      
-      
-      let eyeCoords = vec4.transformMat4([], clipCoords, invProj)
-      eyeCoords = [eyeCoords[0], eyeCoords[1], -1.0, 0.0] 
-      
-      let rayDir = vec4.transformMat4([], eyeCoords, invView);
-      rayDir = [rayDir[0], rayDir[1], rayDir[2]];
-      vec3.normalize(rayDir, rayDir)
-      
+          let aspect = im_w/im_h
+          let n = -1
+          let f = -100
 
-      console.log(rayDir)
+          let projectionMatrix = mat4.perspective([], fovy, aspect, n, f)
 
-      let planePoint = [0, 0, 0]
-      let planeNormal = e
-      let rayOrigin = [0, 0, 1]
-      
-      console.log(rayOrigin, e)
-      
-      const denom = vec3.dot(rayDir, planeNormal)
+          const clipCoords = [x, y, -1.0, 1.0]
 
-      const diff = vec3.sub([], planePoint, rayOrigin)
-      const t = vec3.dot(diff, planeNormal) / denom
+          const invProj = mat4.invert([], projectionMatrix)
+          const invView = mat4.invert([], viewMatrix)
 
-      let rayWorld = vec3.scaleAndAdd([], rayOrigin, rayDir, t)
-      
-      
-      
 
-      drawn_shape.vertices.push(rayWorld)
+          let eyeCoords = vec4.transformMat4([], clipCoords, invProj)
+          eyeCoords = [eyeCoords[0], eyeCoords[1], -1.0, 0.0] 
 
-      let colors = [[1.0, 0.0, 0.0],
-               [0.0, 1.0, 0.0],
-               [0.0, 0.0, 1.0]]
+          let rayDir = vec4.transformMat4([], eyeCoords, invView);
+          rayDir = [rayDir[0], rayDir[1], rayDir[2]];
+          vec3.normalize(rayDir, rayDir)
 
-      drawn_shape.vertex_colors.push(nn.random(colors))
-      if (drawn_shape.vertices.length >= 3){
-        let num = drawn_shape.vertices.length
-        console.log(drawn_shape.vertices.slice(0,-1))
-        let v1 = nn.randomInt(num-2)
-        let v2 = nn.randomInt(num-2)
-        while (v1 === v2){
-          v2 = nn.randomInt(num-2)
+
+          console.log(rayDir)
+
+          let planePoint = [0, 0, 0]
+          let planeNormal = e
+          let rayOrigin = [0, 0, 1]
+
+          console.log(rayOrigin, e)
+
+          const denom = vec3.dot(rayDir, planeNormal)
+
+          const diff = vec3.sub([], planePoint, rayOrigin)
+          const t = vec3.dot(diff, planeNormal) / denom
+
+          let rayWorld = vec3.scaleAndAdd([], rayOrigin, rayDir, t)
+
+
+
+
+          drawn_shape.vertices.push(rayWorld)
+
+          let colors = [[1.0, 0.0, 0.0],
+                   [0.0, 1.0, 0.0],
+                   [0.0, 0.0, 1.0]]
+
+          drawn_shape.vertex_colors.push(nn.random(colors))
+          if (drawn_shape.vertices.length >= 3){
+            let num = drawn_shape.vertices.length
+            console.log(drawn_shape.vertices.slice(0,-1))
+            let v1 = nn.randomInt(num-2)
+            let v2 = nn.randomInt(num-2)
+            while (v1 === v2){
+              v2 = nn.randomInt(num-2)
+            }
+            drawn_shape.triangles.push([v1, v2, num-1])
+          }
+          console.log(drawn_shape)
+          if(drawn_shape.triangles.length >= 1){
+            redraw(drawn_shape)
+          }
         }
-        drawn_shape.triangles.push([v1, v2, num-1])
-      }
-      console.log(drawn_shape)
-      if(drawn_shape.triangles.length >= 1){
-        redraw(drawn_shape)
       }
     }
+    dragging = false
   })
   
-  
-  nn.on("keydown", (f) => {
-    let diffX = 0
-    let diffY = 0
-    if (f.key === "w"){
-      diffY = 10
-    }
-    if (f.key === "s"){
-      diffY = -10
-    }
-    if (f.key === "a"){
-      diffX = 10
-    }
-    if (f.key === "d"){
-      diffX = -10
-    }
+  nn.on("mousedown", () => {
     
-    let angleX = diffX * (2*Math.PI/360) / 5
-    let angleY = diffY * (2*Math.PI/360) / 5
-    let rotateY = [
-      [1, 0, 0, 0],
-      [0, Math.cos(angleY), -Math.sin(angleY), 0],
-      [0, Math.sin(angleY), Math.cos(angleY), 0],
-      [0, 0, 0, 1]
-    ]
-    let rotateX = [
-      [Math.cos(angleX), 0, -Math.sin(angleX), 0],
-      [0, 1, 0, 0],
-      [Math.sin(angleX), 0, Math.cos(angleX), 0],
-      [0, 0, 0, 1]
-    ]
-    let rotate = matrix_multiply(rotateX, rotateY)
-
-    // for (let x = 0; x < drawn_shape.vertices.length; x++){
-    //   console.log(drawn_shape.vertices[x])
-    //   drawn_shape.vertices[x] = vector_multiply(drawn_shape.vertices[x], rotate)
-    // }
-    e.push(1)
-    e = vector_multiply(e, rotate)
-    e.pop()
-    redraw(drawn_shape)
+    dragging = false
+    timer = setTimeout(() => {
+      dragging = true
+    }, holdDuration)
+    
     startX = nn.mouseX
     startY = nn.mouseY
   })
+  
+  nn.on("mousemove", () => {
+    if (dragging && nn.mouseY < nn.height - 30 && nn.mouseY > 60){
+      const diffX = nn.mouseX - startX
+      const diffY = nn.mouseY - startY
+      let angleX = diffX * (2*Math.PI/360) / 5
+      let angleY = diffY * (2*Math.PI/360) / 5
+      let rotateY = [
+        [1, 0, 0, 0],
+        [0, Math.cos(angleY), -Math.sin(angleY), 0],
+        [0, Math.sin(angleY), Math.cos(angleY), 0],
+        [0, 0, 0, 1]
+      ]
+      let rotateX = [
+        [Math.cos(angleX), 0, -Math.sin(angleX), 0],
+        [0, 1, 0, 0],
+        [Math.sin(angleX), 0, Math.cos(angleX), 0],
+        [0, 0, 0, 1]
+      ]
+      let rotate = matrix_multiply(rotateX, rotateY)
+      
+      for (let x = 0; x < drawn_shape.vertices.length; x++){
+        drawn_shape.vertices[x] = vector_multiply(drawn_shape.vertices[x], rotate)
+      }
+      
+      // e = vector_multiply(e, rotate)
+      redraw(drawn_shape)
+      startX = nn.mouseX
+      startY = nn.mouseY
+    }
+  })
+  
+//   nn.on("keydown", (f) => {
+//     let diffX = 0
+//     let diffY = 0
+//     if (f.key === "w"){
+//       diffY = 10
+//     }
+//     if (f.key === "s"){
+//       diffY = -10
+//     }
+//     if (f.key === "a"){
+//       diffX = 10
+//     }
+//     if (f.key === "d"){
+//       diffX = -10
+//     }
+    
+//     let angleX = diffX * (2*Math.PI/360) / 5
+//     let angleY = diffY * (2*Math.PI/360) / 5
+//     let rotateY = [
+//       [1, 0, 0, 0],
+//       [0, Math.cos(angleY), -Math.sin(angleY), 0],
+//       [0, Math.sin(angleY), Math.cos(angleY), 0],
+//       [0, 0, 0, 1]
+//     ]
+//     let rotateX = [
+//       [Math.cos(angleX), 0, -Math.sin(angleX), 0],
+//       [0, 1, 0, 0],
+//       [Math.sin(angleX), 0, Math.cos(angleX), 0],
+//       [0, 0, 0, 1]
+//     ]
+//     let rotate = matrix_multiply(rotateX, rotateY)
+
+//     // for (let x = 0; x < drawn_shape.vertices.length; x++){
+//     //   console.log(drawn_shape.vertices[x])
+//     //   drawn_shape.vertices[x] = vector_multiply(drawn_shape.vertices[x], rotate)
+//     // }
+//     e.push(1)
+//     e = vector_multiply(e, rotate)
+//     e.pop()
+//     redraw(drawn_shape)
+//     startX = nn.mouseX
+//     startY = nn.mouseY
+//   })
   
   nn.on("mousewheel", (f) => {
     if(f.deltaY > 0){
