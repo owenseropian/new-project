@@ -18,9 +18,12 @@
 <canvas id="myCanvas" width="1000" height="1000"></canvas>
 
 <script src="https://cdn.jsdelivr.net/gh/netizenorg/netnet-standard-library/build/nn.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gl-matrix@3.4.3/gl-matrix-min.js"></script>
 <script>
   /* global nn */
-  
+  /* global glMatrix */
+  const { mat4, vec3, vec4 } = glMatrix;
+    
   function shape(vertices, triangles, vertex_colors) {
     this.vertices = vertices
     this.triangles = triangles
@@ -42,7 +45,7 @@
   //set outlines to -1 to get none (0.03 - 0.1 best outlines)
   let outlines = -1
   //distance away from cube
-  let distance = 1
+  let distance = 5
   let fovy = 65
   
   let white = [1, 1, 1]
@@ -610,34 +613,57 @@
     ]
   }
   
+  function getCameraPositionFromViewMatrix(viewMatrix) {
+    const invView = mat4.invert([], viewMatrix);
+    return [invView[12], invView[13], invView[14]];
+  }
+  
   nn.on("mousedown", () => {
     if (nn.mouseY < nn.height - 30){
+      const x = 1.0 - (2.0 * (nn.mouseX)) / nn.width
+      const y = 1.0 - (2.0 * (nn.mouseY)) / nn.height
+
+      let viewMatrix = mat4.lookAt([], e, [0,0,0], [0,1,0])
+      
+      let aspect = im_w/im_h
+      let n = -1
+      let f = -100
+
+      let projectionMatrix = mat4.perspective([], fovy, aspect, n, f)
+      
+      const clipCoords = [x, y, -1.0, 1.0]
+      
+      const invProj = mat4.invert([], projectionMatrix)
+      const invView = mat4.invert([], viewMatrix)
       
       
-      let a = e[0]
-      let b = e[1]
-      let c = e[2]
-      let u = (nn.mouseX - (nn.width/2)) * (im_w/im_h * Math.tan((fovy/2)*(2*Math.PI/360)) * -1) / nn.width
-      let v = (nn.mouseY - (nn.height/2)) * (Math.tan((fovy/2)*(2*Math.PI/360)) * -1) / nn.height
-      console.log(a, b, c, u, v)
+      let eyeCoords = vec4.transformMat4([], clipCoords, invProj)
+      eyeCoords = [eyeCoords[0], eyeCoords[1], -1.0, 0.0] 
+      
+      let rayDir = vec4.transformMat4([], eyeCoords, invView);
+      rayDir = [rayDir[0], rayDir[1], rayDir[2]];
+      vec3.normalize(rayDir, rayDir)
+      
 
-      let v1, v2
-      if (c !== 0) {
-          v1 = [-b, a, 0]
-          v2 = [-c, 0, a]
-      } else if (b !== 0) {
-          v1 = [-c, 0, a]
-          v2 = [0, -c, b]
-      } else {
-          v1 = [0, -c, b]
-          v2 = [-b, a, 0]
-      }
+      console.log(rayDir)
 
-      const x = u * v1[0] + v * v2[0]
-      const y = u * v1[1] + v * v2[1]
-      const z = u * v1[2] + v * v2[2]
+      let planePoint = [0, 0, 0]
+      let planeNormal = e
+      let rayOrigin = [0, 0, 1]
+      
+      console.log(rayOrigin, e)
+      
+      const denom = vec3.dot(rayDir, planeNormal)
 
-      drawn_shape.vertices.push([x, y, z])
+      const diff = vec3.sub([], planePoint, rayOrigin)
+      const t = vec3.dot(diff, planeNormal) / denom
+
+      let rayWorld = vec3.scaleAndAdd([], rayOrigin, rayDir, t)
+      
+      
+      
+
+      drawn_shape.vertices.push(rayWorld)
 
       let colors = [[1.0, 0.0, 0.0],
                [0.0, 1.0, 0.0],
@@ -646,12 +672,16 @@
       drawn_shape.vertex_colors.push(nn.random(colors))
       if (drawn_shape.vertices.length >= 3){
         let num = drawn_shape.vertices.length
-        let vectors = findTwoClosestVectors(drawn_shape.vertices[num - 1], drawn_shape.vertices.slice(0,-1))
-        drawn_shape.triangles.push([vectors[0], vectors[1], num - 1])
+        console.log(drawn_shape.vertices.slice(0,-1))
+        let v1 = nn.randomInt(num-2)
+        let v2 = nn.randomInt(num-2)
+        while (v1 === v2){
+          v2 = nn.randomInt(num-2)
+        }
+        drawn_shape.triangles.push([v1, v2, num-1])
       }
       console.log(drawn_shape)
-      if(drawn_shape.triangles.length >= 3){
-        console.log("A")
+      if(drawn_shape.triangles.length >= 1){
         redraw(drawn_shape)
       }
     }
