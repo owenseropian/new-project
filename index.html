@@ -731,60 +731,27 @@
     }
   })
   
-//   nn.on("keydown", (f) => {
-//     let diffX = 0
-//     let diffY = 0
-//     if (f.key === "w"){
-//       diffY = 10
-//     }
-//     if (f.key === "s"){
-//       diffY = -10
-//     }
-//     if (f.key === "a"){
-//       diffX = 10
-//     }
-//     if (f.key === "d"){
-//       diffX = -10
-//     }
-    
-//     let angleX = diffX * (2*Math.PI/360) / 5
-//     let angleY = diffY * (2*Math.PI/360) / 5
-//     let rotateY = [
-//       [1, 0, 0, 0],
-//       [0, Math.cos(angleY), -Math.sin(angleY), 0],
-//       [0, Math.sin(angleY), Math.cos(angleY), 0],
-//       [0, 0, 0, 1]
-//     ]
-//     let rotateX = [
-//       [Math.cos(angleX), 0, -Math.sin(angleX), 0],
-//       [0, 1, 0, 0],
-//       [Math.sin(angleX), 0, Math.cos(angleX), 0],
-//       [0, 0, 0, 1]
-//     ]
-//     let rotate = matrix_multiply(rotateX, rotateY)
-
-//     // for (let x = 0; x < drawn_shape.vertices.length; x++){
-//     //   console.log(drawn_shape.vertices[x])
-//     //   drawn_shape.vertices[x] = vector_multiply(drawn_shape.vertices[x], rotate)
-//     // }
-//     e.push(1)
-//     e = vector_multiply(e, rotate)
-//     e.pop()
-//     redraw(drawn_shape)
-//     startX = nn.mouseX
-//     startY = nn.mouseY
-//   })
-  
-  nn.on("mousewheel", (f) => {
-    if(f.deltaY > 0){
-      fovy -= 1
+  nn.on("keydown", (f) => {
+    console.log(f.key)
+    if (f.key === "Backspace" || f.key === "Delete"){
+      if (drawn_shape === create_shape){
+        if (drawn_shape.vertices.length >= 1) {
+          let del_v = nn.randomInt(drawn_shape.vertices.length - 1)
+          for (let i = drawn_shape.triangles.length-1; i >= 0; i--){
+            for (let j = 0; j < 3; j++){
+              if (drawn_shape.triangles[i][j] === del_v){
+                drawn_shape.triangles.pop(i)
+                break
+              }
+            }
+          }
+          drawn_shape.vertices.pop(del_v)
+        }
+      }
+      redraw(drawn_shape)
     }
-    else if (f.deltaY < 0){
-      fovy += 1
-    }
-    
-    redraw(drawn_shape)
   })
+
   
   
 </script>
