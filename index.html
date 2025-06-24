@@ -547,7 +547,7 @@
     let img = render(shape, im_w, im_h, e, fovy)
     draw(img)
     
-    createSlider(1, 50, pixelated, 1, 0, (e) => {
+    createSlider(5, 50, pixelated, 1, 0, (e) => {
     pixelated = Number(e.target.value)
     redraw(drawn_shape)
   })
